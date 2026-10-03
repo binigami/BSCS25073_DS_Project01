@@ -12,8 +12,8 @@
 #include <string>
 #include <cstdint>
 #include <fstream>
-#include <unistd.h>
-#include <sys/socket.h>
+//#include <unistd.h>
+//#include <sys/socket.h>
 #include <cstdint>
 #include <cstdio>
 using namespace std;
@@ -65,9 +65,11 @@ public:
     }
     int32_t depth()
     {
+        return 0;
     }
     int32_t snapshot_into(T out[], int32_t maxLen)
     {
+        return 0;
         // copies every frame, top to bottom in the array given as a parameter
         // this is what buildSnapshot() call, returns count written
     }
@@ -101,6 +103,7 @@ public:
     }
     int32_t getStepCount()
     {
+        return 0;
     }
 };
 
@@ -154,21 +157,79 @@ struct PendingPatch
 
 
 // PASS 0x0: READING source.bin + VALIDITY CHECK
-bool readSourceLine(ifstream &in, string &out)
-{
-    // reads the next nonblank line
+bool readSourceLine(ifstream& in, string& out) {
+    while (getline(in, out)) {
+        bool hasChars = false;
+        for (int i = 0; i < out.length(); i++) {
+            if (out[i] != ' ' && out[i] != '\t' && out[i] != '\r') {
+                hasChars = true;
+                break;
+            }
+        }
+        if (hasChars) {
+            return true;
+        }
+    }
+    return false;
 }
-string firstWord(const string &line)
-{
-    // returns first word from the input string
+
+string firstWord(const string& line) {
+    string word = "";
+    int i = 0;
+    while (i < line.length() && (line[i] == ' ' || line[i] == '\t' || line[i] == '\r')) {
+        i++;
+    }
+    while (i < line.length() && line[i] != ' ' && line[i] != '\t' && line[i] != '\r') {
+        word += line[i];
+        i++;
+    }
+    return word;
 }
-string secondWord(const string &line)
-{
-    // returns the second word
+
+string secondWord(const string& line) {
+    string word = "";
+    int i = 0;
+    while (i < line.length() && (line[i] == ' ' || line[i] == '\t' || line[i] == '\r')) i++;
+    while (i < line.length() && line[i] != ' ' && line[i] != '\t' && line[i] != '\r') i++;
+    while (i < line.length() && (line[i] == ' ' || line[i] == '\t' || line[i] == '\r')) i++;
+    while (i < line.length() && line[i] != ' ' && line[i] != '\t' && line[i] != '\r') {
+        word += line[i];
+        i++;
+    }
+    return word;
 }
-bool validateProgram(const char *sourcePath)
-{
-    // for each func defined there should be exactly one func_end and no nested funcs allowed - 
+
+bool validateProgram(const char* sourcePath) {
+    ifstream in(sourcePath);
+    if (!in.is_open()) {
+        cout << "Error: Could not open " << sourcePath << endl;
+        return false;
+    }
+    string line;
+    bool insideFunc = false;
+    while (readSourceLine(in, line)) {
+        string fw = firstWord(line);
+        if (fw == "func") {
+            if (insideFunc == true) {
+                cout << "Validation Error: Nested functions are not allowed." << endl;
+                return false;
+            }
+            insideFunc = true;
+        }
+        else if (fw == "func_end") {
+            if (insideFunc == false) {
+                cout << "Validation Error: func_end found without a matching func." << endl;
+                return false;
+            }
+            insideFunc = false;
+        }
+    }
+    if (insideFunc == true) {
+        cout << "Validation Error: Missing func_end at the end of the file." << endl;
+        return false;
+    }
+    cout << "Validation Successful: Structural integrity verified." << endl;
+    return true;
 }
 
 // PASS 0x1: RESOLVE() -> resolve.bin
@@ -176,9 +237,11 @@ int64_t writeResolveRecord(FILE *f, int64_t offsetField, const string &text)
 {
     // writes one [offset(8B)][size(4B)][string] record at the current file position
     // returns this record's own starting byte position
+    return 0;
 }
 int64_t readResolveRecord(FILE *f, string &outText)
 {
+    return 0;
     // reads one record at the current position and advances past it, returns the offset field - the raw line text comes back untouched in outText.
 }
 int64_t resolveProgram(const char *sourcePath, const char *resolveBinPath)
@@ -186,7 +249,7 @@ int64_t resolveProgram(const char *sourcePath, const char *resolveBinPath)
     FuncEntry funcArray[MAX_FUNCS];
     int32_t funcCount = 0;
     PendingPatch patches[MAX_PATCHES];
-    int32_t patchCount = 0;
+    int32_t patchCount = 0; return 0;
     // Every source line becomes one record holding the raw line, as-is.
     // resolve() only PEEKS at the leading word(s) -- enough to spot FUNC
     // (remember its position) and CALL (remember which function it needs
@@ -211,6 +274,7 @@ struct Token
 };
 int32_t tokenizeLine(const string &line, Token tokens[], int32_t maxTokens)
 {
+    return 0;
     // first word is always a instruction keyword
     // instruction set = [func, func_end, call, set, add, sub, mul and div]
     // next word is identifier like name of a function, variable name
@@ -218,6 +282,7 @@ int32_t tokenizeLine(const string &line, Token tokens[], int32_t maxTokens)
 }
 Snapshot *buildSnapshot(Stack<Frame> &callStack)
 {
+    return false;
     // build the snapshot based on the callStack given
 }
 void executeProgram(const char *resolveBinPath, int64_t mainOffset, Timeline &timeline)
@@ -242,7 +307,6 @@ void writeTdbg(Timeline &timeline, const char *tdbgPath)
 // main section
 int32_t main()
 {
-
     if (!validateProgram("source.bin"))
     {
         // send an error response instead of a .tdbg file
