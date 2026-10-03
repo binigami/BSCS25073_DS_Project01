@@ -1,4 +1,4 @@
 1. 3 oct 2026, around 4:30 pm, i have made a github repo and now i 
    have created this progress.txt file and now i will work on the rest of the things
 2. 4:37 same day and now im going to push the file ta gave and pdf and this 
-3.
+3. 4:45 created source.bin file and added .gitignore and now i will push these.
