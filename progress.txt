@@ -9,4 +9,12 @@
    i was facing problem while understanding it, took some help to understand the logic 
    behind it and now that i undderstood it, i coded these two, and i will push these.
    my goal today is to complete phase 2 and 3, both of these today.
-6.
+6.same day around an hour later, worked on this function called resolve program or something
+  which was also difficult to understand, not gonna lie this whole project is kind of 
+  difficult because it has things we were never taught before so yes i had to take help
+  from the internet and also a few of my seniors, and a cousin of mine who has already
+  completed his degree, now pretty much understood it and i have written it, took me quite a while, 
+  its 2:33 now to be exact, will push this in 2 3 minutes, what it does is it reads from source bin
+  and writes into the binary resolve bin ig, and it writes offset size and charecter through the function
+  we created in step 5. will explain the rest in viva cuz if i explain everything in this single step,
+  it will take forever for all the next steps.

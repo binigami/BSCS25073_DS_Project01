@@ -254,20 +254,25 @@ int64_t readResolveRecord(FILE* f, string& outText) {
     outText = string(buffer, size);
     return offsetField;
 }
-int64_t resolveProgram(const char *sourcePath, const char *resolveBinPath)
-{
-    FuncEntry funcArray[MAX_FUNCS];
-    int32_t funcCount = 0;
-    PendingPatch patches[MAX_PATCHES];
-    int32_t patchCount = 0; return 0;
-    // Every source line becomes one record holding the raw line, as-is.
-    // resolve() only PEEKS at the leading word(s) -- enough to spot FUNC
-    // (remember its position) and CALL (remember which function it needs
-    // and where its offset field sits).
-    // Once the whole file is written, every CALL's offset field is patched
-    // with its target's position. Patching happens after the full write
-    // Returns the byte offset of main's FUNC header record.
-    // if there is no main return the error 
+int64_t resolveProgram(const char *sourcePath, const char *resolveBinPath) {
+    ifstream in(sourcePath);
+    if (!in.is_open()) {
+        cout << "Error: Could not open " << sourcePath << endl;
+        return -1;
+    }
+    FILE *out = fopen(resolveBinPath, "wb");
+    if (!out) {
+        cout << "Error: Could not create " << resolveBinPath << endl;
+        return -1;
+    }
+    string line;
+    int64_t defaultOffset = 0;
+    while (readSourceLine(in, line)) {
+        writeResolveRecord(out, defaultOffset, line);
+    }
+    fclose(out);
+    cout << "Resolve Successful: Created resolve.bin." << endl;
+    return 0;
 }
 
 // PASS 0x2: EXECUTION (tokenization happens here)
@@ -322,7 +327,7 @@ int32_t main()
         // send an error response instead of a .tdbg file
         return 1;
     }
-
+    
     int64_t mainOffset = resolveProgram("source.bin", "resolve.bin");
 
     Timeline timeline;
