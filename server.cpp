@@ -233,16 +233,26 @@ bool validateProgram(const char* sourcePath) {
 }
 
 // PASS 0x1: RESOLVE() -> resolve.bin
-int64_t writeResolveRecord(FILE *f, int64_t offsetField, const string &text)
-{
-    // writes one [offset(8B)][size(4B)][string] record at the current file position
-    // returns this record's own starting byte position
-    return 0;
+int64_t writeResolveRecord(FILE* f, int64_t offsetField, const string& text) {
+    int64_t startPos = ftell(f);
+    int32_t size = text.length();
+    fwrite(&offsetField, sizeof(int64_t), 1, f);
+    fwrite(&size, sizeof(int32_t), 1, f);
+    fwrite(text.c_str(), 1, size, f);
+    return startPos;
 }
-int64_t readResolveRecord(FILE *f, string &outText)
-{
-    return 0;
-    // reads one record at the current position and advances past it, returns the offset field - the raw line text comes back untouched in outText.
+
+int64_t readResolveRecord(FILE* f, string& outText) {
+    int64_t offsetField;
+    if (fread(&offsetField, sizeof(int64_t), 1, f) != 1) {
+        return -1;
+    }
+    int32_t size;
+    fread(&size, sizeof(int32_t), 1, f);
+    char buffer[2048];
+    fread(buffer, 1, size, f);
+    outText = string(buffer, size);
+    return offsetField;
 }
 int64_t resolveProgram(const char *sourcePath, const char *resolveBinPath)
 {

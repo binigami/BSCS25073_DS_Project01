@@ -4,3 +4,9 @@
 3. 4:45 created source.bin file and added .gitignore and now i will push these.
 4. around 10, edited the 4 functions of the first phase given in project doc
    about first and second word, validating file and reading a line, now pushing.
+5. next day which is 4 oct 2026, and its almost 12:30, just woke up a while ago and 
+   i started phase 2 where i have done read resolve record and the write one too,
+   i was facing problem while understanding it, took some help to understand the logic 
+   behind it and now that i undderstood it, i coded these two, and i will push these.
+   my goal today is to complete phase 2 and 3, both of these today.
+6.
