@@ -18,3 +18,9 @@
   and writes into the binary resolve bin ig, and it writes offset size and charecter through the function
   we created in step 5. will explain the rest in viva cuz if i explain everything in this single step,
   it will take forever for all the next steps.
+7. 5th oct which is next day and its 10 pm, i forgot to update progress.txt yesterday but i was so busy
+  that i didnt even do what i planned which was completing  phase 3, yeah i started it and did it to some
+  extent but then i got stuck, and i got busy and today whole day basically went to uni, what i did yesterday
+  was i completed tokenize line function and the execute program function and i will push it right now before
+  doing today's work. the tokenize one was easy, i think i also made buildsnapshot which was pretty easy
+  too but the execute program took almost my whole day, it was extremely difficult to understand and implement.

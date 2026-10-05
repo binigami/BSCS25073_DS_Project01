@@ -287,27 +287,74 @@ struct Token
     TokenType type;
     string text;
 };
-int32_t tokenizeLine(const string &line, Token tokens[], int32_t maxTokens)
-{
-    return 0;
-    // first word is always a instruction keyword
-    // instruction set = [func, func_end, call, set, add, sub, mul and div]
-    // next word is identifier like name of a function, variable name
-    // after identifier all are the params/arg, space separated
+int32_t tokenizeLine(const string& line, Token tokens[], int32_t maxTokens) {
+    int32_t tokenCount = 0;
+    string currentWord = "";
+    for (int i = 0; i <= line.length(); i++) {
+        if (i == line.length() || line[i] == ' ' || line[i] == '\t' || line[i] == '\r') {
+            if (currentWord.length() > 0) {
+                if (tokenCount < maxTokens) {
+                    if (tokenCount == 0) {
+                        tokens[tokenCount].type = KEYWORD;
+                    }
+                    else if (tokenCount == 1) {
+                        tokens[tokenCount].type = IDENTIFIER;
+                    }
+                    else {
+                        tokens[tokenCount].type = PARAM;
+                    }
+                    tokens[tokenCount].text = currentWord;
+                    tokenCount++;
+                }
+                currentWord = "";
+            }
+        }
+        else {
+            currentWord += line[i];
+        }
+    }
+    return tokenCount;
 }
-Snapshot *buildSnapshot(Stack<Frame> &callStack)
-{
-    return false;
-    // build the snapshot based on the callStack given
-}
-void executeProgram(const char *resolveBinPath, int64_t mainOffset, Timeline &timeline)
-{
-    // initialize the call stack
-    // make the main frame
-    // push main frame on the call stack
 
-    // implementation:
-    // execute line by line, and according to the keyword perform action
+Snapshot* buildSnapshot(Stack<Frame>& callStack) {
+    Snapshot* snap = new Snapshot();
+    snap->stackDepth = callStack.snapshot_into(snap->callStack, MAX_STACK_DEPTH);
+    return snap;
+}
+void executeProgram(const char* resolveBinPath, int64_t mainOffset, Timeline& timeline) {
+    FILE* f = fopen(resolveBinPath, "rb");
+    if (!f) {
+        cout << "Error opening " << resolveBinPath << endl;
+        return;
+    }
+    Stack<Frame> callStack;
+    Frame mainFrame;
+    mainFrame.func_name = "main";
+    mainFrame.argc = 0;
+    mainFrame.localCount = 0;
+    mainFrame.returnLine = -1;
+    callStack.push(mainFrame);
+    fseek(f, mainOffset, SEEK_SET);
+    string line;
+    while (!callStack.isEmpty()) {
+        int64_t currentOffset = readResolveRecord(f, line);
+        if (currentOffset == -1) {
+            break;
+        }
+        Token tokens[MAX_TOKENS];
+        int32_t count = tokenizeLine(line, tokens, MAX_TOKENS);
+        if (count > 0) {
+            string kw = tokens[0].text;
+            if (kw == "func_end") {
+                callStack.pop();
+                if (!callStack.isEmpty()) {
+                    fseek(f, callStack.peek().returnLine, SEEK_SET);
+                }
+            }
+            timeline.record(buildSnapshot(callStack));
+        }
+    }
+    fclose(f);
 }
 
 // PASS 0x3: SERIALIZE TIMELINE
