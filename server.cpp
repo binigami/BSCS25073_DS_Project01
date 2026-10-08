@@ -18,6 +18,60 @@
 #include <cstdio>
 using namespace std;
 
+// manual helper functions since we are not allowed to use other libraries
+int32_t parseNumber(const string& s) {
+    int32_t val = 0;
+    int32_t start = 0;
+    int32_t sign = 1;
+    if (s.length() > 0 && s[0] == '-') {
+        sign = -1;
+        start = 1;
+    }
+    for (int i = start; i < s.length(); i++) {
+        val = val * 10 + (s[i] - '0');
+    }
+    return val * sign;
+}
+
+string intToString(int32_t num) {
+    if (num == 0) return "0";
+    string res = "";
+    while (num > 0) {
+        res = (char)('0' + (num % 10)) + res;
+        num /= 10;
+    }
+    return res;
+}
+
+int32_t getVarValue(Frame& frame, const string& name) {
+    for (int i = 0; i < frame.localCount; i++) {
+        if (frame.locals[i].name == name) return frame.locals[i].value;
+    }
+    for (int i = 0; i < frame.argc; i++) {
+        if (frame.argv[i].name == name) return frame.argv[i].value;
+    }
+    return parseNumber(name);
+}
+
+void setVarValue(Frame& frame, const string& name, int32_t val) {
+    for (int i = 0; i < frame.localCount; i++) {
+        if (frame.locals[i].name == name) {
+            frame.locals[i].value = val;
+            return;
+        }
+    }
+    for (int i = 0; i < frame.argc; i++) {
+        if (frame.argv[i].name == name) {
+            frame.argv[i].value = val;
+            return;
+        }
+    }
+    frame.locals[frame.localCount].name = name;
+    frame.locals[frame.localCount].value = val;
+    frame.localCount++;
+}
+
+
 // ---- Constants ----
 const int32_t MAX_VARS_PER_FRAME = 16;
 const int32_t MAX_STACK_DEPTH = 64;
@@ -30,80 +84,107 @@ const int32_t SOCKET_TIMEOUT_SEC = 5;                      // TODO: apply as SO_
 
 // ---- Custom data structures
 
-// Stack: back the live Call Stack during execution
 template <typename T>
-class Stack
-{
-    struct Node
-    {
+class Stack {
+    struct Node {
         T data;
-        Node *next;
+        Node* next;
     };
-    Node *top;
+    Node* top;
     int32_t count;
 
 public:
-    // Implement these functions:
-    Stack()
-    { // initialize the stack
+    Stack() {
+        top = nullptr;
+        count = 0;
     }
-    void push(const T &val)
-    {
 
-        // pushes the value on the stack if max limit is not reached yet.
+    void push(const T& val) {
+        if (count < MAX_STACK_DEPTH) {
+            Node* newNode = new Node();
+            newNode->data = val;
+            newNode->next = top;
+            top = newNode;
+            count++;
+        }
     }
-    T pop()
-    {
-        // pop the top value on the stack
+
+    T pop() {
+        T val;
+        if (top != nullptr) {
+            Node* temp = top;
+            val = top->data;
+            top = top->next;
+            delete temp;
+            count--;
+        }
+        return val;
     }
-    T &peek()
-    {
-        // returns the top value on the stack
+
+    T& peek() {
+        return top->data;
     }
-    bool isEmpty()
-    {
+
+    bool isEmpty() {
+        return top == nullptr;
     }
-    int32_t depth()
-    {
-        return 0;
+
+    int32_t depth() {
+        return count;
     }
-    int32_t snapshot_into(T out[], int32_t maxLen)
-    {
-        return 0;
-        // copies every frame, top to bottom in the array given as a parameter
-        // this is what buildSnapshot() call, returns count written
+
+    int32_t snapshot_into(T out[], int32_t maxLen) {
+        int32_t written = 0;
+        Node* curr = top;
+        while (curr != nullptr && written < maxLen) {
+            out[written] = curr->data;
+            written++;
+            curr = curr->next;
+        }
+        return written;
     }
 };
 
-
-// Timeline : doubly linked list of Snapshots
-struct Snapshot; // fwd declaration;
-struct TimelineNode
-{
-    Snapshot *data;
-    TimelineNode *next;
-    TimelineNode *prev;
+struct Snapshot;
+struct TimelineNode {
+    Snapshot* data;
+    TimelineNode* next;
+    TimelineNode* prev;
 };
-class Timeline
-{
-    TimelineNode *head, *tail;
+
+class Timeline {
+    TimelineNode* head, * tail;
     int32_t stepCount;
 
 public:
-    // Implement these functions
-    Timeline()
-    {
+    Timeline() {
+        head = nullptr;
+        tail = nullptr;
+        stepCount = 0;
     }
-    void record(Snapshot *s)
-    {
-        // add record in the timeline
+
+    void record(Snapshot* s) {
+        TimelineNode* newNode = new TimelineNode();
+        newNode->data = s;
+        newNode->next = nullptr;
+        newNode->prev = tail;
+        if (tail == nullptr) {
+            head = newNode;
+            tail = newNode;
+        }
+        else {
+            tail->next = newNode;
+            tail = newNode;
+        }
+        stepCount++;
     }
-    TimelineNode *begin()
-    {
+
+    TimelineNode* begin() {
+        return head;
     }
-    int32_t getStepCount()
-    {
-        return 0;
+
+    int32_t getStepCount() {
+        return stepCount;
     }
 };
 
@@ -323,9 +404,21 @@ Snapshot* buildSnapshot(Stack<Frame>& callStack) {
 }
 void executeProgram(const char* resolveBinPath, int64_t mainOffset, Timeline& timeline) {
     FILE* f = fopen(resolveBinPath, "rb");
-    if (!f) {
-        cout << "Error opening " << resolveBinPath << endl;
-        return;
+    if (!f) return;
+    FuncEntry funcTable[MAX_FUNCS];
+    int32_t funcCount = 0;
+    string line;
+    fseek(f, 0, SEEK_SET);
+    while (true) {
+        int64_t currentOffset = readResolveRecord(f, line);
+        if (currentOffset == -1) break;
+        Token tempTokens[MAX_TOKENS];
+        int32_t count = tokenizeLine(line, tempTokens, MAX_TOKENS);
+        if (count > 0 && tempTokens[0].text == "func") {
+            funcTable[funcCount].funcName = tempTokens[1].text;
+            funcTable[funcCount].byteOffsetInResolveBin = currentOffset;
+            funcCount++;
+        }
     }
     Stack<Frame> callStack;
     Frame mainFrame;
@@ -335,20 +428,53 @@ void executeProgram(const char* resolveBinPath, int64_t mainOffset, Timeline& ti
     mainFrame.returnLine = -1;
     callStack.push(mainFrame);
     fseek(f, mainOffset, SEEK_SET);
-    string line;
     while (!callStack.isEmpty()) {
         int64_t currentOffset = readResolveRecord(f, line);
-        if (currentOffset == -1) {
-            break;
-        }
+        if (currentOffset == -1) break;
         Token tokens[MAX_TOKENS];
         int32_t count = tokenizeLine(line, tokens, MAX_TOKENS);
         if (count > 0) {
             string kw = tokens[0].text;
             if (kw == "func_end") {
                 callStack.pop();
-                if (!callStack.isEmpty()) {
-                    fseek(f, callStack.peek().returnLine, SEEK_SET);
+                if (!callStack.isEmpty()) fseek(f, callStack.peek().returnLine, SEEK_SET);
+            }
+            else if (kw == "set") {
+                int32_t val = getVarValue(callStack.peek(), tokens[2].text);
+                setVarValue(callStack.peek(), tokens[1].text, val);
+            }
+            else if (kw == "add") {
+                int32_t val1 = getVarValue(callStack.peek(), tokens[1].text);
+                int32_t val2 = getVarValue(callStack.peek(), tokens[2].text);
+                setVarValue(callStack.peek(), tokens[1].text, val1 + val2);
+            }
+            else if (kw == "sub") {
+                int32_t val1 = getVarValue(callStack.peek(), tokens[1].text);
+                int32_t val2 = getVarValue(callStack.peek(), tokens[2].text);
+                setVarValue(callStack.peek(), tokens[1].text, val1 - val2);
+            }
+            else if (kw == "call") {
+                string targetFunc = tokens[1].text;
+                int64_t targetOffset = -1;
+                for (int i = 0; i < funcCount; i++) {
+                    if (funcTable[i].funcName == targetFunc) {
+                        targetOffset = funcTable[i].byteOffsetInResolveBin;
+                        break;
+                    }
+                }
+                if (targetOffset != -1) {
+                    callStack.peek().returnLine = ftell(f);
+                    Frame newFrame;
+                    newFrame.func_name = targetFunc;
+                    newFrame.argc = count - 2;
+                    newFrame.localCount = 0;
+                    newFrame.returnLine = -1;
+                    for (int i = 0; i < newFrame.argc; i++) {
+                        newFrame.argv[i].name = "arg" + intToString(i);
+                        newFrame.argv[i].value = getVarValue(callStack.peek(), tokens[i + 2].text);
+                    }
+                    callStack.push(newFrame);
+                    fseek(f, targetOffset, SEEK_SET);
                 }
             }
             timeline.record(buildSnapshot(callStack));

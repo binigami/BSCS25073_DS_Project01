@@ -24,3 +24,9 @@
   was i completed tokenize line function and the execute program function and i will push it right now before
   doing today's work. the tokenize one was easy, i think i also made buildsnapshot which was pretty easy
   too but the execute program took almost my whole day, it was extremely difficult to understand and implement.
+8. today is 8th oct morning, yesterday was wednesday, i forgot to update this about the work i did yesterday the whole day
+  i created that stack and timeline that was empty, i created a few manual functions to help me read and i edited
+  the main execution a little so that everytime it reads func, it stores it with its offset,
+  and when it sees call, it looks for that func with that offset and many more. i will push it todoay but this is 
+  yesterday's work.
+9. 
