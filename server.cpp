@@ -483,14 +483,33 @@ void executeProgram(const char* resolveBinPath, int64_t mainOffset, Timeline& ti
     fclose(f);
 }
 
-// PASS 0x3: SERIALIZE TIMELINE
-void writeTdbg(Timeline &timeline, const char *tdbgPath)
-{
-    // placeholder for header
-    // index array of the size of stepcount from the timeline
-    // placing each snapshot in the file while maintaining the index(starting point of each nth snapshot)
-    // after timeline add the index array i the file
-    // update the header
+void writeTdbg(Timeline& timeline, const char* tdbgPath) {
+    FILE* f = fopen(tdbgPath, "wb");
+    if (!f) return;
+    TTDBHeader header;
+    header.magic[0] = 'T';
+    header.magic[1] = 'T';
+    header.magic[2] = 'D';
+    header.magic[3] = 'B';
+    header.version = 1;
+    header.stepCount = timeline.getStepCount();
+    header.indexOffset = 0;
+    fwrite(&header, sizeof(TTDBHeader), 1, f);
+    int64_t* indexArray = new int64_t[header.stepCount];
+    int32_t currentIndex = 0;
+    TimelineNode* curr = timeline.begin();
+    while (curr != nullptr) {
+        indexArray[currentIndex] = ftell(f);
+        fwrite(curr->data, sizeof(Snapshot), 1, f);
+        curr = curr->next;
+        currentIndex++;
+    }
+    header.indexOffset = ftell(f);
+    fwrite(indexArray, sizeof(int64_t), header.stepCount, f);
+    fseek(f, 0, SEEK_SET);
+    fwrite(&header, sizeof(TTDBHeader), 1, f);
+    fclose(f);
+    delete[] indexArray;
 }
 // main section
 int32_t main()

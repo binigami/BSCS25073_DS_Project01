@@ -29,4 +29,9 @@
   the main execution a little so that everytime it reads func, it stores it with its offset,
   and when it sees call, it looks for that func with that offset and many more. i will push it todoay but this is 
   yesterday's work.
-9. 
+9. 11th oct, i was busy from a few days because of the workload, we have like 6 7 assignments due and quizzes of 5 subjects
+   so it took quite some time to get back on this, but at the end i was able to do it, gave a few time yesterday and today,
+   i have completed the writetdbg which completes the server file yesterday but today was mostly researching about what to
+   do to make it work on linux and windows both, and a few of debugging and testing, im pushing this final piece, after that
+   i will work on linux etc and then ill work on the bugs and errors or other things
+   10.
