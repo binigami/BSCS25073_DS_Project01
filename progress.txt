@@ -34,4 +34,7 @@
    i have completed the writetdbg which completes the server file yesterday but today was mostly researching about what to
    do to make it work on linux and windows both, and a few of debugging and testing, im pushing this final piece, after that
    i will work on linux etc and then ill work on the bugs and errors or other things
-   10.
+   10. final day before submission, and today was mostly errors finding, one of them was declaring frame and variable on top
+   because they were giving me some errors, and then i also remove duplicate struct definitions etc. then i commented out
+   <sys/socket.h> and <unistd.h> so that its just c++ libraries.then i ran it on windows through mingw c++ compiler, and also
+   then i did it on linux by downloading ubuntu and then running it there too, it worked on both, now im pushing the final code.
