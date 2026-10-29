@@ -40,3 +40,7 @@
    then i did it on linux by downloading ubuntu and then running it there too, it worked on both, now im pushing the final code.
 10. phase 2 has come so we will start it today, lets start with setup and push. we are going to create new files and push it 
     forthis specific push.
+11. same day oct 29 late night around 9:43 pm, started working on the checksum stuff for the wire format in helper.h. PDF says
+    every message needs status byte payload and 4 byte checksum at the end. honestly crc32 logic was a bit confusing at 
+    first with bit shifts and polynomials so looked up standard crc32 implementation. added computeCRC32 and trailer checker 
+    helper in helper.h so client, server and lb can all use it. pushing this now.
