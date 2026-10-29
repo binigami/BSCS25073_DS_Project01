@@ -38,3 +38,5 @@
    because they were giving me some errors, and then i also remove duplicate struct definitions etc. then i commented out
    <sys/socket.h> and <unistd.h> so that its just c++ libraries.then i ran it on windows through mingw c++ compiler, and also
    then i did it on linux by downloading ubuntu and then running it there too, it worked on both, now im pushing the final code.
+10. phase 2 has come so we will start it today, lets start with setup and push. we are going to create new files and push it 
+    forthis specific push.
