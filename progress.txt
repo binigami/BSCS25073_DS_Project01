@@ -44,3 +44,8 @@
     every message needs status byte payload and 4 byte checksum at the end. honestly crc32 logic was a bit confusing at 
     first with bit shifts and polynomials so looked up standard crc32 implementation. added computeCRC32 and trailer checker 
     helper in helper.h so client, server and lb can all use it. pushing this now.
+12. 31 oct 2026, almost 11:24 pm night, moved to load balancer part today, we cannot use std queue so had to write
+    custom linked list queue template from scratch for holding client sockets. implemented enqueue dequeue size isEmpty and
+    destructor. had a small issue with dangling pointers when queue becomes empty but fixed it by setting rear to null when
+    front becomes null. pushing this custom queue now. it didnt take this much time because we had already done this before
+    only because we had exams thatss why it took a few days to get back here.

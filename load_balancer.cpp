@@ -14,7 +14,7 @@
 //   main thread (dispatcherLoop) -> takes ONE client out of the queue and serves it completely, then the next.
 //
 // How the server is started:
-//   system("./server 5001 &");
+//   system("./server 50    01 &");
 //   The "&" is required. Without it, system() waits until the server exits and the load balancer freezes.
 //
 //
@@ -53,45 +53,63 @@ int serverPort = 5001;
 // ---- Queue: here it holds client sockets (int). ----
 // Implement it yourself, do not use std::queue.
 template <typename T>
-class Queue
-{
-    struct Node
-    {
+class Queue {
+    struct Node {
         T data;
         Node* next;
     };
-    Node* front, * rear;
+    Node* front;
+    Node* rear;
     int count;
 
-
 public:
-    // Implement these functions:
-    Queue()
-    {
-
+    Queue() {
+        front = nullptr;
+        rear = nullptr;
+        count = 0;
     }
-    ~Queue()
-    {
 
+    ~Queue() {
+        while (!isEmpty()) {
+            dequeue();
+        }
     }
-    void enqueue(const T& val)
-    {
 
+    void enqueue(const T& val) {
+        Node* n = new Node();
+        n->data = val;
+        n->next = nullptr;
+        if (rear == nullptr) {
+            front = rear = n;
+        }
+        else {
+            rear->next = n;
+            rear = n;
+        }
+        count++;
     }
-    T dequeue()
-    {
 
+    T dequeue() {
+        if (isEmpty()) return T();
+        Node* temp = front;
+        T val = temp->data;
+        front = front->next;
+        if (front == nullptr) {
+            rear = nullptr;
+        }
+        delete temp;
+        count--;
+        return val;
     }
-    bool isEmpty()
-    {
 
+    bool isEmpty() {
+        return count == 0;
     }
-    int size()
-    {
 
+    int size() {
+        return count;
     }
 };
-
 struct ClientInfo
 {
     int sock;           // the connected socket
