@@ -49,3 +49,8 @@
     destructor. had a small issue with dangling pointers when queue becomes empty but fixed it by setting rear to null when
     front becomes null. pushing this custom queue now. it didnt take this much time because we had already done this before
     only because we had exams thatss why it took a few days to get back here.
+13. 3 nov 2026 morning around 10:24 am, was very busy because of exams but finally gave it time
+    today worked on waking up the server automatically from load balancer. if server is 
+    down, lb should run system command with & to start server in background and retry 50 times with 100ms interval.
+    implemented startServer connectToServer and connectToServerWithWakeup in load_balancer.cpp. had a small confusion about
+    whether system() blocks or not but adding & makes it run in background so it doesn't freeze the load balancer. 
