@@ -54,3 +54,8 @@
     down, lb should run system command with & to start server in background and retry 50 times with 100ms interval.
     implemented startServer connectToServer and connectToServerWithWakeup in load_balancer.cpp. had a small confusion about
     whether system() blocks or not but adding & makes it run in background so it doesn't freeze the load balancer. 
+14. next day, today is 4 nov 2026 and it is 11:15 pm, worked on socket binding and accept thread for load balancer.
+    we cannot block acceptor while server is busy or booting so acceptLoop runs in thread. ive alse implemented 
+     createListenSocket with SO_REUSEADDR so port doesn't freeze on restart. if pendingClients queue is full,
+     itis full when there aremore than 8 client, it sends error "server busy, try again later" with crc32 checksum 
+     and closes socket right away. had a small issue with deadlock on queueMutex when checking size but fixed order of unlock. 
