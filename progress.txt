@@ -59,3 +59,8 @@
      createListenSocket with SO_REUSEADDR so port doesn't freeze on restart. if pendingClients queue is full,
      itis full when there aremore than 8 client, it sends error "server busy, try again later" with crc32 checksum 
      and closes socket right away. had a small issue with deadlock on queueMutex when checking size but fixed order of unlock. 
+15. today is 5 nov 2026 and time is late night around 11:42 pm, completed load balancer today by implementing relayOneClient
+    and dispatcherLoop and main function. dispatcher takes one client at a time from pending queue and checks 30 sec timeout 
+    and  wakes server if down, streams bytes from client to server, calls shutdown SHUT_WR, then streams server reply back to
+    client.it had a bug where dispatcher was spinning 100% cpu when queue empty so added usleep(10000) inside loop. 
+    with this my load balancer is complete so ill push it now.
