@@ -440,11 +440,71 @@ void writeTdbg(Timeline& timeline, const char* tdbgPath) {
         currentIndex++;
     }
     header.indexOffset = ftell(f);
-    fwrite(indexArray, sizeof(int64_t), header.stepCount, f);
-    fseek(f, 0, SEEK_SET);
-    fwrite(&header, sizeof(TTDBHeader), 1, f);
+     fwrite(indexArray, sizeof(int64_t), header.stepCount, f);
+     fseek(f, 0, SEEK_SET);
+     fwrite(&header, sizeof(TTDBHeader), 1, f);
     fclose(f);
     delete[] indexArray;
+}
+
+// phase 2 things
+bool sendAll(int sock, const char* buf, size_t n) {
+    size_t total = 0;
+    while (total < n) {
+         ssize_t sent = send(sock, buf + total, n - total, 0);
+         if (sent <= 0) return false;
+        total += sent;
+    }
+    return true;
+}
+
+void sendWireResponse(int sock, char status, const char* payload, size_t len) {
+    uint32_t crc = computeCRC32(&status, 1);
+    crc =  computeCRC32(payload, len, crc);
+    crc  = finalizeCRC32(crc);
+    sendAll(sock, &status, 1);
+    sendAll(sock, payload, len);
+    sendAll(sock, (const char*)&crc, 4);
+}
+
+void processIncomingRequest(int clientSock) {
+     vector<char> sourceBuf;
+    char buffer[4096];
+    while (true) {
+        ssize_t r = recv(clientSock, buffer, sizeof(buffer), 0);
+         if (r <= 0)  break;
+        sourceBuf.insert(sourceBuf.end(), buffer, buffer + r);
+    }
+    ofstream fout("source.bin", ios::binary);
+    if (!fout.is_open()) {
+        string err = "failed to create source.bin on server";
+        sendWireResponse(clientSock, 1, err.c_str(), err.length());
+         close(clientSock);
+        return;
+    }
+    if (!sourceBuf.empty()) {
+        fout.write(sourceBuf.data(), sourceBuf.size());
+    }
+    fout.close();
+
+   
+
+    // if pipeline succeeds:
+    ifstream fin("session.tdbg", ios::binary | ios::ate);
+    if (!fin.is_open()) {
+        string err = "failed to generate .tdbg file";
+        sendWireResponse(clientSock, 1, err.c_str(), err.length());
+        close(clientSock);
+        return;
+    }
+    streamsize size = fin.tellg();
+     fin.seekg(0, ios::beg);
+      vector<char> tdbgBuf(size);
+    fin.read(tdbgBuf.data(), size);
+    fin.close();
+
+    sendWireResponse(clientSock, 0, tdbgBuf.data(), size);
+    close(clientSock);
 }
 
 // ---- MAIN ----
