@@ -90,23 +90,65 @@ bool recvAll(int sock, char* buf, size_t n)
 {
     // recv() can return fewer bytes than asked for, so keep calling it until exactly n bytes are read.
     // Return false if the connection closes or fails before n bytes arrive.
+    size_t total = 0;
+    while (total < n) {
+        ssize_t r = recv(sock, buf + total, n - total, 0);
+        if (r <= 0) return false;
+        total  += r;
+    }
+        return true;
 }
 bool sendAll(int sock, const char* buf, size_t n)
 {
     // send() can send fewer bytes than asked for, so keep calling it until all n bytes are sent.
     // Use the flag MSG_NOSIGNAL. Return false if the connection fails.
+    size_t total =  0;
+    while (total <  n) {
+        ssize_t sent =  send(sock, buf + total, n - total, 0);
+        if (sent <= 0)  return false;
+        total += sent;
+    }
+     return true;
 }
 
 int connectToHost(const char* host, int port)
 {
     // Create a TCP socket and connect it to host:port.
     // Return the socket, or -1 if the connection fails.
+    int s =  socket(AF_INET, SOCK_STREAM, 0);
+    if (s < 0)  return -1;
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family =  AF_INET;
+    addr.sin_port  = htons(port);
+    inet_pton(AF_INET, host, &addr.sin_addr);
+    if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(s); 
+         return -1;
+    }
+       return s;
 }
 bool uploadSource(int sock, const char* sourcePath)
 {
     // have to do checksum and then send
     // When the file is finished, call shutdown(sock, SHUT_WR). This is how the server knows the string is complete.
     // Return false if the file cannot be opened or any send fails.
+    ifstream fin(sourcePath, ios::binary);
+    if (!fin.is_open()) return false;
+     char buf[IO_BUFFER_SIZE];
+    while (fin) {
+         fin.read(buf, IO_BUFFER_SIZE);
+        streamsize bytesRead =  fin.gcount();
+        if (bytesRead > 0)  {
+            if (!sendAll(sock, buf, bytesRead)) {
+                fin.close();
+                  return false;
+            }
+        }
+    }
+    fin.close();
+     shutdown(sock, SHUT_WR);
+        return true;
 }
 bool receiveResponse(int sock, const char* outTdbgPath, string& outError)
 {

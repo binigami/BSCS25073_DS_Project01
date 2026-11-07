@@ -69,3 +69,7 @@
      until EOF (recv returns 0), writes to source.bin, runs pass0 validation, pass1 resolve, pass2 execution, and pass3 serialization
      . if any error occurs it sends status 1 byte with error text and crc32 checksum. if success, it reads session.tdbg and sends
      status 0 byte with tdbg file payload and crc32 checksum. tested payload sending over socket connection. 
+17. date : 7 nov 2026 time: 10:15 pm,today i started working on client.cpp networking side from morning. implemented connectToHost
+    sendAll recvAll and uploadSource functions. the document of this phase requires client to stream source file over socket to 
+    load balancer and then call shutdown with SHUT_WR to indicate upload complete.i did had a minor issue with gcount reading
+    binary files properly but fixed loop condition. now i will push this part.
