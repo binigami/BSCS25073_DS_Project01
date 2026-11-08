@@ -157,6 +157,59 @@ bool receiveResponse(int sock, const char* outTdbgPath, string& outError)
     // Status 1: collect the payload into outError. Status 0: write the payload to the file.
     // At the end call verify(). If it fails, delete the file, set outError to
     // "checksum mismatch, response corrupted" and return false.
+     TrailerChecker tc;
+    char statusByte;
+
+    if (recv(sock, &statusByte, 1, 0) <= 0) {
+        outError  = "Socket closed, no reply";
+        return false;
+    }
+
+    tc.feedByte(statusByte);
+
+    ofstream fout;
+
+    if (statusByte == 0) {
+         fout.open(outTdbgPath, ios::binary);
+
+        if (!fout.is_open()) {
+            outError = "failed to create local tdbg file";
+            return false;
+        }
+    }
+    char buf[IO_BUFFER_SIZE];
+
+
+    while (true) {
+           ssize_t r = recv(sock, buf, IO_BUFFER_SIZE, 0);
+         if (r <= 0) break;
+        for (ssize_t i = 0; i < r; i++) {
+            tc.feedByte(buf[i]);
+            if (tc.buffer.size() > 4) {
+                  char payloadByte = tc.buffer[0];
+                if (statusByte == 0) {
+                    fout.write(&payloadByte, 1);
+                }
+                else {
+                    outError += payloadByte;
+                }
+            }
+        }
+    }
+    if (statusByte == 0) {
+         fout.close();
+    }
+    if (!tc.verify()) {
+        if (statusByte == 0) {
+            remove(outTdbgPath);
+        }
+        outError = "checksum mismatch, response corrupted";
+        return false;
+    }
+    if (statusByte != 0) {
+         return false;
+    }
+      return true;
 }
 
 // =============================================================================================

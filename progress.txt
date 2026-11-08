@@ -73,3 +73,8 @@
     sendAll recvAll and uploadSource functions. the document of this phase requires client to stream source file over socket to 
     load balancer and then call shutdown with SHUT_WR to indicate upload complete.i did had a minor issue with gcount reading
     binary files properly but fixed loop condition. now i will push this part.
+18. date = 8 nov 2026 time = 11:23 am, i woke up early and ive been working and i  implemented receiveResponse in client.cpp. 
+    it feeds every received byte into TrailerChecker which holds back 4 bytes for crc32 verification. if status is 0 it streams
+    payload to ttdb_last.tdbg file, if status is 1 it collects error message. if checksum fails at the end it deletes the damaged file 
+    and sets outError to checksum mismatch, it was not that difficult since ive gotten used to the difficulty level of this projefct so
+    i will push it now ig.
