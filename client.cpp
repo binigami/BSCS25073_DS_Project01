@@ -221,13 +221,58 @@ bool receiveResponse(int sock, const char* outTdbgPath, string& outError)
 
 bool openTdbg(const char* path, TdbgReader& r)
 {
+        FILE* f = fopen(path, "rb");
+    if (!f) return false;
+
+    if (fread(&r.header, sizeof(TTDBHeader), 1, f) != 1) {
+        fclose(f);
+
+        return  false;
+    }
+    if (strncmp(r.header.magic, "TTDB", 4) != 0) {
+        fclose(f);
+         return false;
+    }
+    r.file_index = fileno(f);
+        fseeko(f, r.header.indexOffset, SEEK_SET);
+
+    r.index.resize(r.header.stepCount);
+
+    if (fread(r.index.data(), sizeof(int64_t), r.header.stepCount, f) != (size_t)r.header.stepCount) {
+        fclose(f);
+            return false;
+    }
+        
+    return true;
 }
 void closeTdbg(TdbgReader& r)
 {
     // Free r.index and close the file.
+    if (r.file_index >= 0) {
+         close(r.file_index);
+        r.file_index = -1;
+    }
+     r.index.clear();
 }
 Snapshot* readSnapshotAt(TdbgReader& r, int32_t step)
 {
+     if (step < 0 || step >= r.header.stepCount) return nullptr;
+    int fd = dup(r.file_index);
+
+    if (fd < 0) return nullptr;
+
+    off_t offset = r.index[step];
+      lseek(fd, offset, SEEK_SET);
+    Snapshot* s = new Snapshot();
+      ssize_t res = read(fd, s, sizeof(Snapshot));
+    close(fd);
+
+    if (res != sizeof(Snapshot)) {
+         delete s;
+        return nullptr;
+    }
+
+      return s;
 }
 
 // =============================================================================================
@@ -237,12 +282,18 @@ Snapshot* readSnapshotAt(TdbgReader& r, int32_t step)
 
 void initSession(DebugSession& s)
 {
-
+    s.active_flag = 0;
+    s.currentStep = 0;
+    s.reader.file_index = -1;
 }
 void closeSession(DebugSession& s)
 {
     // If active, call closeTdbg(s.reader). Then set active = false.
     // Called when the user types quit and when the input ends.
+    if (s.active_flag) {
+        closeTdbg(s.reader);
+        s.active_flag = 0;
+    }
 }
 
 // =============================================================================================
@@ -255,9 +306,37 @@ bool showCurrent(DebugSession& s)
 {
     // Read the snapshot at s.currentStep, call printSnapshot, delete the snapshot.
     // If readSnapshotAt returns nullptr, print "damaged .tdbg file" and return false.
+    if (!s.active_flag) {
+             cout << "no active debug session\n";
+        return false;
+    }
+
+    Snapshot* snap = readSnapshotAt(s.reader, s.currentStep);
+
+    if (!snap) {
+        cout << "damaged .tdbg file\n";
+        return false;
+    }
+
+    printSnapshot(s.currentStep, s.reader.header.stepCount, *snap);
+         delete snap;
+     return true;
 }
-bool moveBy(DebugSession& s, int32_t delta)
-{
+bool moveBy(DebugSession& s, int32_t delta){
+    if (!s.active_flag) {
+        cout << "no active debug session\n";
+        return false;
+    }
+
+    int64_t target = s.currentStep + delta;
+
+    if (target < 0 || target >= s.reader.header.stepCount) {
+         cout << "step out of range\n";
+        return false;
+    }
+
+    s.currentStep = target;
+    return showCurrent(s);
 }
 bool cmdStart(DebugSession& s, const string& sourcePath)
 {
@@ -269,10 +348,16 @@ bool cmdStart(DebugSession& s, const string& sourcePath)
     //    set s.currentStep = 0 and s.active = true.
     // 5. Show step 1 with showCurrent(s).
 }
-bool cmdNext(DebugSession& s) {}
-bool cmdPrv(DebugSession& s) {}
-bool cmdJmpNext(DebugSession& s, int32_t n) {}
-bool cmdJmpPrv(DebugSession& s, int32_t n) {}
+bool cmdNext(DebugSession& s) { return moveBy(s, 1); }
+bool cmdPrv(DebugSession& s) { return moveBy(s, -1); }
+bool cmdJmpNext(DebugSession& s, int32_t n) {
+    if (n <= 0 || n > MAX_JUMP) return false;
+    return moveBy(s, n);
+}
+bool cmdJmpPrv(DebugSession& s, int32_t n) {
+    if (n <= 0 || n > MAX_JUMP) return false;
+    return moveBy(s, -n);
+}
 
 // =============================================================================================
 // PART E: PRINTING

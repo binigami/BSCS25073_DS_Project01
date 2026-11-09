@@ -78,3 +78,8 @@
     payload to ttdb_last.tdbg file, if status is 1 it collects error message. if checksum fails at the end it deletes the damaged file 
     and sets outError to checksum mismatch, it was not that difficult since ive gotten used to the difficulty level of this projefct so
     i will push it now ig.
+19. today is 9 nov and 4:15 pm, ive finally completed the tdbg binary file reader and step navigation logic in client.cpp. 
+    it took so much time but i just took the whole day yesterday and today was also a holiday so i spent almost all of my time here.
+    the function openTdbg reads TTDBHeader magic bytes stepCount and indexOffsetand then it seeks to trailer index array. readSnapshotAt 
+    uses indexed offsets to seek directly to any step. then i implemented moveBy cmdNext cmdPrv cmdJmpNext and cmdJmpPrv for time travel
+    navigation across execution history.maybe i also did a few other thins but i cant remember them right now so ill just push it for now.
