@@ -88,3 +88,8 @@
     cmdStart handles connecting to load balancer, uploading source file, receiving binary tdbg response, opening session, and automatically
     printing step 1. it was really difficult to implement and it took so much of my time, i also missed today's lab as todayi s the last day for
     this, i didnt come in dsa lab and did this project from home and now i will prepare as i have class at 12.
+21. same day and its the last day of project submission around 9:45 pm, i performed thorough testing of all error scenarios that were written in
+    the document, i tested queue overflow when more than 8 clients connect, server crash fallback, 30s timeout drop in dispatcher, crc32 checksum corruption handling,
+    and damaged tdbg file fallback. fixed minor resource cleanup leaks on socket close. cnat remember what else i did so ill just write these for now.
+    ig phase 2 is completed. it was really difficult to understand and write but at the end ive finally done it after so long, it took so much
+    of my time and it was so difficult.
