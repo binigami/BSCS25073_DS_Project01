@@ -347,6 +347,41 @@ bool cmdStart(DebugSession& s, const string& sourcePath)
     // 4. Only now close the old reader (if s.active), then put the new reader into s,
     //    set s.currentStep = 0 and s.active = true.
     // 5. Show step 1 with showCurrent(s).
+    int sock = connectToHost(LB_HOST.c_str(), LB_PORT);
+
+    if (sock < 0) {
+        cout << "failed to connect to load balancer\n";
+         return false;
+    }
+
+    if (!uploadSource(sock, sourcePath.c_str())) {
+        cout << "failed to upload source file\n";
+        close(sock);
+        return false;
+    }
+
+    string err;
+    if (!receiveResponse(sock, TDBG_FILE, err)) {
+         cout << "Error: " << err << "\n";
+         close(sock);
+        return false;
+    }
+     close(sock);
+    
+     TdbgReader newReader;
+    if (!openTdbg(TDBG_FILE, newReader)) {
+        cout << "server sent a damaged .tdbg file\n";
+            return false;
+    }
+    if (s.active_flag) {
+        closeTdbg(s.reader);
+    }
+
+    s.reader = newReader;
+    s.currentStep  = 0;
+    s.active_flag =  1;
+    
+   return showCurrent(s);
 }
 bool cmdNext(DebugSession& s) { return moveBy(s, 1); }
 bool cmdPrv(DebugSession& s) { return moveBy(s, -1); }
@@ -363,12 +398,42 @@ bool cmdJmpPrv(DebugSession& s, int32_t n) {
 // PART E: PRINTING
 // =============================================================================================
 
-void printSnapshot(int32_t step, int32_t totalSteps, const Snapshot& s)
-{
+void printSnapshot(int32_t step, int32_t totalSteps, const Snapshot& s){
+        cout << "Step [" << (step + 1) << "/" << totalSteps << "]\n";
+    cout << "Stack Depth: " << s.stackDepth << "\n";
+
+    for (int i = s.stackDepth - 1; i >= 0; i--) {
+        const Frame& f = s.callStack[i];
+
+        cout << "  Frame " << i << ": " << f.func_name << " (return line: " << f.returnLine << ")\n";
+         
+        if (f.argc > 0) {
+            cout << "    Args: ";
+            for (int j = 0; j < f.argc; j++) {
+                cout << f.argv[j].name << "=" << f.argv[j].value << (j + 1 < f.argc ? ", " : "");
+            }
+              cout << "\n";
+        }
+        if (f.localCount > 0) {
+             cout << "    Locals: ";
+            for (int j = 0; j < f.localCount; j++) {
+                cout << f.locals[j].name << "=" << f.locals[j].value << (j + 1 < f.localCount ? ", " : "");
+            }
+             cout << "\n";
+        }
+    }
 }
 void printHelp()
 {
     // Print the commands
+    cout << "Available commands:\n";
+    cout << "  start <sourcePath>  - upload source and start debug session\n";
+    cout << "  next                - step forward by 1\n";
+    cout << "  prv                 - step backward by 1\n";
+    cout << "  jmp next <n>        - jump forward by n steps\n";
+    cout << "  jmp prv <n>         - jump backward by n steps\n";
+    cout << "  help                - print this help menu\n";
+    cout << "  quit / exit         - exit ttdb shell\n";
 }
 
 // =============================================================================================
@@ -388,6 +453,81 @@ bool runCommand(DebugSession& s, const string& line, bool& quitRequested)
     //      help       -> printHelp
     //      quit, exit -> set quitRequested = true
     // 4. For anything else, or a wrong number of words, print "unknown command" and the help text, and return false.
+    vector<string> words;
+    string token = "";
+
+    for (char c : line) {
+          if (isspace(c)) {
+            if (!token.empty()) {
+                words.push_back(token);
+                token = "";
+            }
+          }
+
+        else {
+            token  += c;
+        }
+    }
+
+    if (!token.empty()) words.push_back(token);
+
+    if (words.empty()) return true;
+    if (words[0] == "ttdb") {
+
+        words.erase(words.begin());
+         if (words.empty()) return true;
+    }
+     
+    string cmd  = words[0];
+
+    if (cmd == "start") {
+        if (words.size() < 2) {
+
+            cout << "usage: start <sourcePath>\n";
+            return false;
+        }
+        return cmdStart(s, words[1]);
+    }
+    else if (cmd == "next") {
+        return cmdNext(s);
+    }
+    else if (cmd == "prv") {
+        return cmdPrv(s);
+    }
+    else if (cmd == "jmp") {
+
+        if (words.size() < 3) {
+            cout << "usage: jmp next <n> OR jmp prv <n>\n";
+            return false;
+        }
+
+        int n = atoi(words[2].c_str());
+
+        if (words[1] == "next") {
+            return cmdJmpNext(s, n);
+        }
+        else if (words[1] == "prv") {
+            return cmdJmpPrv(s, n);
+        }
+
+        else {
+            cout << "unknown jump direction\n";
+            return false;
+        }
+    }
+    else if (cmd == "help") {
+         printHelp();
+        return true;
+    }
+    else if (cmd == "quit" || cmd == "exit") {
+          quitRequested = true;
+        return true;
+    }
+    else {
+        cout << "unknown command: " << cmd << "\n";
+        printHelp();
+        return false;
+    }
 }
 int main(int argc, char* argv[])
 {
@@ -401,5 +541,23 @@ int main(int argc, char* argv[])
     //
     // After the loop: closeSession(session) and return 0.
     // Never exit the loop because of an error. Only quit or the end of the input leaves it.
+    if (argc >= 2) LB_HOST = argv[1];
+    if (argc >= 3) LB_PORT  = atoi(argv[2]);
 
+     DebugSession session;
+    initSession(session);
+
+     cout << "Welcome to Time-Travel Debugger (TTDB)\n";
+    printHelp();
+      bool quitRequested = false;
+     string line;
+
+    while (!quitRequested) {
+        cout << PROMPT;
+         if (!getline(cin, line)) break;
+        runCommand(session, line, quitRequested);
+    }
+    closeSession(session);
+     
+    return 0;
 }

@@ -83,3 +83,8 @@
     the function openTdbg reads TTDBHeader magic bytes stepCount and indexOffsetand then it seeks to trailer index array. readSnapshotAt 
     uses indexed offsets to seek directly to any step. then i implemented moveBy cmdNext cmdPrv cmdJmpNext and cmdJmpPrv for time travel
     navigation across execution history.maybe i also did a few other thins but i cant remember them right now so ill just push it for now.
+20. date: 10 nov 2026 time : 11:15 am,i built interactive main shell loop and command parser in client.cpp. ive finally completed it after so
+    long, runCommand tokenizes command line inputs into words manually. supports start, next, prv, jmp next n, jmp prv n, help, and exit. 
+    cmdStart handles connecting to load balancer, uploading source file, receiving binary tdbg response, opening session, and automatically
+    printing step 1. it was really difficult to implement and it took so much of my time, i also missed today's lab as todayi s the last day for
+    this, i didnt come in dsa lab and did this project from home and now i will prepare as i have class at 12.
